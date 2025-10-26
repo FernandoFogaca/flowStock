@@ -7,11 +7,37 @@ export default function Suppliers({ darkMode }) {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [productsSupplied, setProductsSupplied] = useState("");
+  const [country, setCountry] = useState("br");
+  const [postalCode, setPostalCode] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
-  const [postalCode, setPostalCode] = useState("");
+  const [error, setError] = useState(null);
 
+  // Função para buscar endereço na API zippopotam.us
+  const fetchAddress = async () => {
+    if (!postalCode || !country) return;
+
+    try {
+      const res = await fetch(`https://api.zippopotam.us/${country}/${postalCode}`);
+      if (!res.ok) throw new Error("ZIP/CEP not found");
+
+      const data = await res.json();
+      const place = data.places[0];
+
+      setAddress(place["place name"] || "");
+      setCity(place["state"] || "");
+      setState(place["state abbreviation"] || "");
+      setError(null);
+    } catch (err) {
+      setError("Address not found. Check ZIP/CEP and country.");
+      setAddress("");
+      setCity("");
+      setState("");
+    }
+  };
+
+  // Adicionar fornecedor
   const addSupplier = (e) => {
     e.preventDefault();
 
@@ -26,25 +52,28 @@ export default function Suppliers({ darkMode }) {
       phone,
       email,
       productsSupplied,
+      country,
       address,
       city,
       state,
-      postalCode
+      postalCode,
     };
 
     setSuppliers([...suppliers, newSupplier]);
 
-    // clear fields
+    // limpar campos
     setName("");
     setPhone("");
     setEmail("");
     setProductsSupplied("");
+    setCountry("br");
     setAddress("");
     setCity("");
     setState("");
     setPostalCode("");
   };
 
+  // Excluir fornecedor
   const deleteSupplier = (id) => {
     setSuppliers(suppliers.filter((s) => s.id !== id));
   };
@@ -64,7 +93,7 @@ export default function Suppliers({ darkMode }) {
           display: "grid",
           gap: "10px",
           maxWidth: "450px",
-          marginBottom: "20px"
+          marginBottom: "20px",
         }}
       >
         <input
@@ -91,9 +120,31 @@ export default function Suppliers({ darkMode }) {
           value={productsSupplied}
           onChange={(e) => setProductsSupplied(e.target.value)}
         />
+
+        {/* Seleção de país */}
+        <select value={country} onChange={(e) => setCountry(e.target.value)}>
+          <option value="br">🇧🇷 Brazil</option>
+          <option value="gb">🇬🇧 United Kingdom</option>
+          <option value="fr">🇫🇷 France</option>
+          <option value="de">🇩🇪 Germany</option>
+          <option value="es">🇪🇸 Spain</option>
+          <option value="nl">🇳🇱 Netherlands</option>
+          <option value="be">🇧🇪 Belgium</option>
+        </select>
+
+        {/* Código postal / CEP */}
         <input
           type="text"
-          placeholder="Address (Street, number, complement)"
+          placeholder="ZIP / CEP"
+          value={postalCode}
+          onChange={(e) => setPostalCode(e.target.value)}
+          onBlur={fetchAddress}
+        />
+
+        {/* Endereço automático */}
+        <input
+          type="text"
+          placeholder="Address (auto-filled)"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
         />
@@ -105,16 +156,12 @@ export default function Suppliers({ darkMode }) {
         />
         <input
           type="text"
-          placeholder="State"
+          placeholder="State / Region"
           value={state}
           onChange={(e) => setState(e.target.value)}
         />
-        <input
-          type="text"
-          placeholder="Postal code"
-          value={postalCode}
-          onChange={(e) => setPostalCode(e.target.value)}
-        />
+
+        {error && <p style={{ color: "red" }}>{error}</p>}
 
         <button
           type="submit"
@@ -125,13 +172,14 @@ export default function Suppliers({ darkMode }) {
             padding: "10px",
             borderRadius: "4px",
             cursor: "pointer",
-            fontWeight: "bold"
+            fontWeight: "bold",
           }}
         >
           <FaPlus /> Add Supplier
         </button>
       </form>
 
+      {/* Tabela de fornecedores */}
       {suppliers.length === 0 ? (
         <p>No suppliers added yet.</p>
       ) : (
@@ -140,7 +188,7 @@ export default function Suppliers({ darkMode }) {
             width: "100%",
             borderCollapse: "collapse",
             background: tableBg,
-            color: textColor
+            color: textColor,
           }}
         >
           <thead style={{ background: "steelblue", color: "white" }}>
@@ -149,6 +197,7 @@ export default function Suppliers({ darkMode }) {
               <th style={th}>Phone</th>
               <th style={th}>Email</th>
               <th style={th}>Products</th>
+              <th style={th}>Country</th>
               <th style={th}>Address</th>
               <th style={th}>City</th>
               <th style={th}>State</th>
@@ -163,6 +212,7 @@ export default function Suppliers({ darkMode }) {
                 <td style={td}>{s.phone}</td>
                 <td style={td}>{s.email}</td>
                 <td style={td}>{s.productsSupplied}</td>
+                <td style={td}>{s.country.toUpperCase()}</td>
                 <td style={td}>{s.address}</td>
                 <td style={td}>{s.city}</td>
                 <td style={td}>{s.state}</td>
@@ -181,15 +231,16 @@ export default function Suppliers({ darkMode }) {
   );
 }
 
+// --- estilos ---
 const th = {
   textAlign: "left",
   padding: "8px",
-  borderBottom: "2px solid #ddd"
+  borderBottom: "2px solid #ddd",
 };
 
 const td = {
   padding: "8px",
-  borderBottom: "1px solid #ddd"
+  borderBottom: "1px solid #ddd",
 };
 
 const btnDel = {
@@ -198,5 +249,5 @@ const btnDel = {
   border: "1px solid steelblue",
   padding: "4px 8px",
   borderRadius: "4px",
-  cursor: "pointer"
+  cursor: "pointer",
 };
